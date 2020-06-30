@@ -1,4 +1,5 @@
 #!/usr/bin/python
+#-*- coding: utf-8 -*-
 
 __author__ = 'mm'
 
@@ -17,6 +18,9 @@ import time
 import geojson
 from pathlib import Path
 import json
+from flask import Flask, render_template
+
+app = Flask(__name__)
 
 
 class SmhiReader(threading.Thread):
@@ -24,11 +28,11 @@ class SmhiReader(threading.Thread):
         threading.Thread.__init__(self)
         self.key = key
         self.smhi = smhi_inst
-        self.result = []
+        self.result = {}
         self.start()
 
     def run(self):
-        self.result = self.smhi.get(self.key)
+        self.result = {'fc': self.smhi.get(self.key), 'resource': self.key}
 
     def get_data(self):
         return self.result
@@ -57,7 +61,7 @@ class Smhi:
 
         self.keys = []
         for r in self.resources['resource']:
-            elem = {'key': r['key'],
+            elem = {'key': "{:02d}".format(int(r['key'])),  # include leading '0' ("1" -> "01")
                     'title': r['title'],
                     'summary': r['summary'],
                     'link': r['link'][0]['href']}
@@ -100,7 +104,8 @@ class Smhi:
                                 s, ms = divmod(stn["updated"], 1000)
                                 ts = '{}.{:03d}'.format(time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(s)), ms)
                                 feature = geojson.Feature(geometry=point,
-                                                          properties={"title": key['title'],
+                                                          properties={"key": key["key"],
+                                                                      "title": key['title'],
                                                                       "summary": key["summary"],
                                                                       "updated": stn["updated"],
                                                                       "timestamp": ts,
@@ -129,29 +134,105 @@ class Smhi:
             return fc
 
 
+ROOT = "metobs_data/"
+
+
+def init_row():
+    row = {}
+    for i in range(1, 13):
+        row["{:02d}".format(i)] = {'path': '', 'str': ''}
+    return row
+
+
 def store(lst):
     """
-    Create a file "./data/2019/01/18/avg_temp.geojson"
+    Create a file "ROOT/2020/06/21/XXX.geojson" and a meta-data file "ROOT/2020/06/21/meta.json"
+    meta.json includes a summary and a translation from "3" (key) to "title" and "summary"
+    Then create an index.html file, with a list of all geojson-files created
+    Also create a top-level index.html to navigate in the directory structure
     """
     os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
     now = datetime.datetime.now()
-    year = now.strftime("%Y") + "/"
-    month = now.strftime("%m") + "/"
+    year = now.strftime("%Y")
+    month = now.strftime("%m")
     day = now.strftime("%d")
-    path = "./data/" + year + month + day
+    path = os.path.join(ROOT, year, month, day)
     Path(path).mkdir(parents=True, exist_ok=True)
 
-    for key, val in lst.items():
-        res_name = path + "/" + key + ".geojson"
-        with open(res_name, 'w') as outfile:
-            geojson.dump(lst[key], outfile)
+    nr_res = 0  # Keep track of number of resource files generated, written into the meta-data file
+    key_translations = {}  # Keep a dictionary of 'key': 'title': 'ABC', 'summary' 'DEF'
+    for k, v in lst.items():
+        nr_res += 1
+        key_translations[k] = {'resource': v['resource']}
+        title = v['resource']['title'].replace(" ", "_").replace(",", "").replace("/", "_per_")
+        summary = v['resource']['summary'].replace(" ", "_").replace(",", "").replace("/", "_per_")
+        res_name = os.path.join(path, k + "_" + title + "__" + summary + ".geojson")
+        with open(res_name, encoding='utf-8', mode='w') as outfile:
+            geojson.dump(fp=outfile, obj=v['fc'], ensure_ascii=False)
             outfile.close()
 
-    meta_name = path + "/" + "meta.json"
-    with open(meta_name, 'w') as outfile:
-        json.dump(fp=outfile, obj={"generated": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                                   "resources": str(len(lst))})
+    meta_name = os.path.join(path, "meta.json")
+    with open(meta_name, encoding='utf-8', mode='w') as outfile:
+        json.dump(fp=outfile,
+                  obj={"generated": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                       "resources": str(nr_res),
+                       "translations": key_translations},
+                  ensure_ascii=False)
         outfile.close()
+
+    # Now generate index.html in each directory, this is a HTML list of geojson-files generated
+    index_name = os.path.join(path, "index.html")
+    with app.app_context():
+        files = [name for name in os.listdir(path) if os.path.isfile(os.path.join(path, name))]
+        geojson_files = sorted([name for name in files if name.endswith(".geojson")])
+        index_file = render_template('geojson_index.html',
+                                     title=path[len(ROOT):].replace("/", "-"),
+                                     files=geojson_files)
+        with open(index_name, encoding='utf-8', mode='w') as outfile:
+            outfile.write(index_file)
+
+        table = {}
+        # Look recursively for index.html files from ROOT and downwards
+        for path in Path(ROOT).rglob('index.html'):
+            # Avoid ROOT/index.html file, only those in sub-directories is valid
+            if os.path.join(ROOT, "index.html") != str(path):
+                parent_path = str(path.parent)[len(ROOT):]  # Skip ROOT from parent_path
+
+                # First get the components from parent_path; 2020/06/23
+                year = parent_path.split("/")[0]   # 2020
+                month = parent_path.split("/")[1]  # 06
+                day = parent_path.split("/")[2]    # 23
+
+                # result2 = {'2020': {'23': {'01': {'path': "", 'str': ""},
+                #                            '02': {'path': "", 'str': ""},
+                #                             ...
+                #                            '06': {'path': "2020/06/23", 'str': "23"},
+                #                            '07': {'path': "", 'str': ""},
+                #                             ...
+                #                            '12': {'path': "", 'str: ""}
+                #                    }
+                #           }
+                if year not in table:
+                    day_row = init_row()
+                    day_row[month] = {'path': str(parent_path), 'str': day}
+                    table[year] = {day: day_row}
+                else:
+                    if day not in table[year]:
+                        day_row = init_row()
+
+                    day_row[month] = {'path': str(parent_path), 'str': day}
+                    table[year][day] = day_row
+
+        root_index_file = render_template('geojson_root_index.html', files=table)
+        with open(os.path.join(ROOT, "index.html"), encoding='utf-8', mode='w') as outfile:
+            outfile.write(root_index_file)
+
+        # Create a symbolic link to the latest generated directory in the ROOT directory
+        try:
+            os.symlink(path, os.path.join(ROOT, 'latest'))
+        except FileExistsError:
+            os.remove(os.path.join(ROOT, 'latest'))
+            os.symlink(path, os.path.join(ROOT, 'latest'))
 
 
 if __name__ == "__main__":
@@ -183,12 +264,9 @@ if __name__ == "__main__":
     weather_data = {}
     ind = 0
     for k in smhi.keys:
-        # The sore function uses name as filename, clean name up to make it valid
-        name = (k['title'] + "_" + k['summary']).replace(" ", "_").replace(",", "_").replace("/", "_per_")
-        name = "".join(i for i in name if i not in "\/:*?<>|")
         result = threads[ind].get_data()
         if result:  # Could be None if there has been an error
-            weather_data[name] = threads[ind].get_data()
+            weather_data[k['key']] = threads[ind].get_data()
         ind += 1
 
     store(weather_data)

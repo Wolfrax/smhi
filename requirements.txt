@@ -4,3 +4,6 @@ geojson==2.5.0
 idna==2.9
 requests==2.24.0
 urllib3==1.25.9
+
+Flask~=1.1.2
+MarkupSafe~=1.1.1

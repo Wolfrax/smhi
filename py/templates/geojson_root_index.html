@@ -1,0 +1,63 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <style>
+        table {
+            border-collapse: collapse;
+            border-spacing: 0;
+            width: 100%;
+            border: 1px solid #ddd;
+        }
+        th, td {
+            text-align: left;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+    </style>
+    <title>SMHI Meteorological Observations</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.png') }}">
+</head>
+<body>
+<h1>SMHI Meteorological Observations</h1>
+<p>
+    Once per day, meteorological observations by <a href="https://www.smhi.se/data">SMHI</a>
+    is collected and transformed into GeoJSON format.
+    <br>
+    There is no guarantee that data is correct and accessible for any purpose whatsoever, but efforts are made to
+    provide data as good as possible.
+    <br>
+</p>
+    {% for year, year_val in files.items()|sort(attribute=0) %}
+        <h2>{{ year }}</h2>
+        <table style="width:100%">
+            <tr>
+                <th>Jan</th>
+                <th>Feb</th>
+                <th>Mar</th>
+                <th>Apr</th>
+                <th>May</th>
+                <th>Jun</th>
+                <th>Jul</th>
+                <th>Aug</th>
+                <th>Sep</th>
+                <th>Oct</th>
+                <th>Nov</th>
+                <th>Dec</th>
+            </tr>
+            {% for day, day_val in year_val.items()|sort(attribute=0) %}
+                <tr>
+                    {% for key, val in day_val.items()|sort(attribute=0) %}
+                    <td> <a href=" {{ val['path'] }}">{{ val['str'] }} </a> </td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </table>
+        <br>
+    {% endfor %}
+<footer>
+    <p>Copyright (C) Mats Melander</p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,23 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>{{ title }}</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.png') }}">
+</head>
+<body>
+<h1>{{ title }}</h1>
+<ul>
+    {% for f in files %}
+    <li style="list-style: none;">
+        <a href="{{ f }}">{{ f }}</a>
+    </li>
+    {% endfor %}
+</ul>
+<footer>
+    <p>Data by <a href="https://opendata.smhi.se/apidocs/metobs/index.html">SMHI Open Data</a></p>
+    <p>Published under these<a href="https://www.smhi.se/klimatdata/Oppna-data/Information-om-oppna-data/villkor-for-anvandning-1.30622">Terms and conditions</a></p>
+    <p>Copyright (C) Mats Melander</p>
+</footer>
+</body>
+</html>
