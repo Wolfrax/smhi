@@ -195,13 +195,13 @@ def store(lst):
         # Look recursively for index.html files from ROOT and downwards
         for path in Path(ROOT).rglob('index.html'):
             # Avoid ROOT/index.html file, only those in sub-directories is valid
-            if os.path.join(ROOT, "index.html") != str(path):
+            if os.path.join(ROOT, 'index.html') != str(path):
                 parent_path = str(path.parent)[len(ROOT):]  # Skip ROOT from parent_path
 
                 # First get the components from parent_path; 2020/06/23
-                year = parent_path.split("/")[0]   # 2020
-                month = parent_path.split("/")[1]  # 06
-                day = parent_path.split("/")[2]    # 23
+                year = parent_path.split(os.path.sep)[0]   # 2020
+                month = parent_path.split(os.path.sep)[1]  # 06
+                day = parent_path.split(os.path.sep)[2]    # 23
 
                 # result2 = {'2020': {'23': {'01': {'path': "", 'str': ""},
                 #                            '02': {'path': "", 'str': ""},
@@ -228,11 +228,12 @@ def store(lst):
             outfile.write(root_index_file)
 
         # Create a symbolic link to the latest generated directory in the ROOT directory
+        latest_path = os.path.join(year, month, day)
         try:
-            os.symlink(path, os.path.join(ROOT, 'latest'))
+            os.symlink(latest_path, os.path.join(ROOT, 'latest'))
         except FileExistsError:
             os.remove(os.path.join(ROOT, 'latest'))
-            os.symlink(path, os.path.join(ROOT, 'latest'))
+            os.symlink(latest_path, os.path.join(ROOT, 'latest'))
 
 
 if __name__ == "__main__":
