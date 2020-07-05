@@ -15,11 +15,40 @@ import glob
 app = Flask(__name__)
 
 ROOT = "metobs_data/"
-LATEST = "latest_test"
+LATEST = "latest"
 
 
-@app.route('/latest/<filename>')
-def latest(filename):
+@app.route('/metobs/<path:subpath>')
+def get_file(subpath):
+    # There are 2 valid subpaths:
+    # 1. "latest/filename"
+    # 2. "2020/07/03/filename"
+
+    parts = subpath.split(os.sep)  # No need to escape subpath, this will not be displayed as HTML
+
+    if len(parts) == 2 and parts[0].lower() == LATEST:  # Option 1
+        path = os.path.join(ROOT, LATEST)
+        file_path = os.path.join(path, parts[1])
+    elif len(parts) == 4:  # Option 2
+        path = os.path.join(ROOT, parts[0], parts[1], parts[2])
+        file_path = os.path.join(path, parts[3])
+    else:  # Not valid
+        path = file_path = ""
+
+    file_list = sorted(glob.glob(file_path)) if file_path else []
+    if file_list:
+        fn = os.path.join(path, os.path.basename(str(file_list[0])))
+        if os.path.isdir(fn):
+            abort(404)
+        else:
+            with open(fn) as f:
+                return f.read()
+    else:
+        abort(404)
+
+
+@app.route('/metobs/latest_file/<filename>')
+def latest_file(filename):
     file_path = os.path.join(ROOT, LATEST, escape(filename))
     file_list = sorted(glob.glob(file_path))
     if file_list:

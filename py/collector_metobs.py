@@ -20,6 +20,7 @@ from pathlib import Path
 import json
 from flask import Flask, render_template
 
+
 app = Flask(__name__)
 
 
@@ -83,58 +84,55 @@ class Smhi:
                     ind3 = next(i for (i, d) in enumerate(lnk["link"]) if d["type"] == "application/json")
                     lnk = requests.get(lnk["link"][ind3]["href"]).json()
                     ind4 = next(i for (i, d) in enumerate(lnk["link"]) if d["type"] == "application/json")
-                    try:
-                        # Note, no key for data, hence always 0
-                        lnk = requests.get(lnk["data"][0]["link"][ind4]["href"]).json()
-                    except requests.exceptions.RequestException as e:
-                        logger.info("{} - {}".format(stn["name"], e))
-                    else:
-                        if lnk["value"] is not None and stn['active'] is True:
-                            try:
-                                # NB if we take the last element we get the latest value,
-                                # the first element (0) is the oldest, the last is the youngest (in case we have a list)
-                                val = float(lnk["value"][-1]["value"])
-                            except ValueError:
-                                # There is a value that cannot be converted to float (e.g. "regn", store it as text
-                                val = lnk["value"][-1]["value"]
+                    # Note, no key for data, hence always 0
+                    lnk = requests.get(lnk["data"][0]["link"][ind4]["href"]).json()
+                    if lnk["value"] is not None and stn['active'] is True:
+                        try:
+                            # NB if we take the last element we get the latest value,
+                            # the first element (0) is the oldest, the last is the youngest (in case we have a list)
+                            val = float(lnk["value"][-1]["value"])
+                        except ValueError:
+                            # There is a value that cannot be converted to float (e.g. "regn", store it as text
+                            val = lnk["value"][-1]["value"]
 
-                            # avoid duplicates
-                            if (stn["longitude"], stn["latitude"]) not in list(geojson.utils.coords(lst)):
-                                point = geojson.Point((stn["longitude"], stn["latitude"]))
-                                s, ms = divmod(stn["updated"], 1000)
-                                ts = '{}.{:03d}'.format(time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(s)), ms)
-                                feature = geojson.Feature(geometry=point,
-                                                          properties={"key": key["key"],
-                                                                      "title": key['title'],
-                                                                      "summary": key["summary"],
-                                                                      "updated": stn["updated"],
-                                                                      "timestamp": ts,
-                                                                      "height": stn["height"],
-                                                                      "value": val},
-                                                          id=stn["name"])
-                                if not feature.is_valid:
-                                    logger.info("Feature not valid: {} - {}".format(stn["name"], feature.errors()))
-                                else:
-                                    lst.append(feature)
+                        # avoid duplicates
+                        if (stn["longitude"], stn["latitude"]) not in list(geojson.utils.coords(lst)):
+                            point = geojson.Point((stn["longitude"], stn["latitude"]))
+                            s, ms = divmod(stn["updated"], 1000)
+                            ts = '{}.{:03d}'.format(time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(s)), ms)
+                            feature = geojson.Feature(geometry=point,
+                                                      properties={"key": key["key"],
+                                                                  "title": key['title'],
+                                                                  "summary": key["summary"],
+                                                                  "updated": stn["updated"],
+                                                                  "timestamp": ts,
+                                                                  "height": stn["height"],
+                                                                  "value": val},
+                                                      id=stn["name"])
+                            if not feature.is_valid:
+                                logger.info("Feature not valid: {} - {}".format(stn["name"], feature.errors()))
                             else:
-                                logger.info("{}: found point long: {}, lat: {}".format(key['title'],
-                                                                                       stn["longitude"],
-                                                                                       stn["latitude"]))
-        except requests.exceptions.RequestException as e:
+                                lst.append(feature)
+                        else:
+                            logger.info("{}: found point long: {}, lat: {}".format(key['title'],
+                                                                                   stn["longitude"],
+                                                                                   stn["latitude"]))
+            fc = geojson.FeatureCollection(lst)
+            if not fc.is_valid:
+                logger.info("Feature Collection not valid: {} - {}".format(key['title'] + " (" + key['summary'] + ")",
+                                                                           fc.errors()))
+                return None
+            else:
+                logger.info("Exiting {}, no of stations: {}".format(key['title'], len(lst)))
+                return fc
+
+        except (requests.exceptions.RequestException, json.decoder.JSONDecodeError) as e:
             logger.error(e)
             sys.exit(1)
 
-        fc = geojson.FeatureCollection(lst)
-        if not fc.is_valid:
-            logger.info("Feature Collection not valid: {} - {}".format(key['title'] + " (" + key['summary'] + ")",
-                                                                       fc.errors()))
-            return None
-        else:
-            logger.info("Exiting {}, no of stations: {}".format(key['title'], len(lst)))
-            return fc
-
 
 ROOT = "metobs_data/"
+INDEX_HTML = "index.html"
 
 
 def init_row():
@@ -150,6 +148,7 @@ def store(lst):
     meta.json includes a summary and a translation from "3" (key) to "title" and "summary"
     Then create an index.html file, with a list of all geojson-files created
     Also create a top-level index.html to navigate in the directory structure
+    Finally create a symbolic link 'latest', pointing at the new directory
     """
     os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
     now = datetime.datetime.now()
@@ -181,7 +180,7 @@ def store(lst):
         outfile.close()
 
     # Now generate index.html in each directory, this is a HTML list of geojson-files generated
-    index_name = os.path.join(path, "index.html")
+    index_name = os.path.join(path, INDEX_HTML)
     with app.app_context():
         files = [name for name in os.listdir(path) if os.path.isfile(os.path.join(path, name))]
         geojson_files = sorted([name for name in files if name.endswith(".geojson")])
@@ -193,15 +192,15 @@ def store(lst):
 
         table = {}
         # Look recursively for index.html files from ROOT and downwards
-        for path in Path(ROOT).rglob('index.html'):
+        for path in Path(ROOT).rglob(INDEX_HTML):
             # Avoid ROOT/index.html file, only those in sub-directories is valid
-            if os.path.join(ROOT, 'index.html') != str(path):
+            if os.path.join(ROOT, INDEX_HTML) != str(path):
                 parent_path = str(path.parent)[len(ROOT):]  # Skip ROOT from parent_path
 
                 # First get the components from parent_path; 2020/06/23
-                year = parent_path.split(os.path.sep)[0]   # 2020
-                month = parent_path.split(os.path.sep)[1]  # 06
-                day = parent_path.split(os.path.sep)[2]    # 23
+                table_year = parent_path.split(os.path.sep)[0]   # 2020
+                table_month = parent_path.split(os.path.sep)[1]  # 06
+                table_day = parent_path.split(os.path.sep)[2]    # 23
 
                 # result2 = {'2020': {'23': {'01': {'path': "", 'str': ""},
                 #                            '02': {'path': "", 'str': ""},
@@ -212,19 +211,19 @@ def store(lst):
                 #                            '12': {'path': "", 'str: ""}
                 #                    }
                 #           }
-                if year not in table:
+                if table_year not in table:
                     day_row = init_row()
-                    day_row[month] = {'path': str(parent_path), 'str': day}
-                    table[year] = {day: day_row}
+                    day_row[table_month] = {'path': str(parent_path), 'str': table_day}
+                    table[table_year] = {table_day: day_row}
                 else:
-                    if day not in table[year]:
+                    if table_day not in table[table_year]:
                         day_row = init_row()
 
-                    day_row[month] = {'path': str(parent_path), 'str': day}
-                    table[year][day] = day_row
+                    day_row[table_month] = {'path': str(parent_path), 'str': table_day}
+                    table[table_year][table_day] = day_row
 
         root_index_file = render_template('geojson_root_index.html', files=table)
-        with open(os.path.join(ROOT, "index.html"), encoding='utf-8', mode='w') as outfile:
+        with open(os.path.join(ROOT, INDEX_HTML), encoding='utf-8', mode='w') as outfile:
             outfile.write(root_index_file)
 
         # Create a symbolic link to the latest generated directory in the ROOT directory

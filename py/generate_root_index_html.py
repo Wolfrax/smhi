@@ -1,6 +1,9 @@
 #!/usr/bin/python
 #-*- coding: utf-8 -*-
 
+# Test script for generating a root index2.html page
+#
+
 __author__ = 'mm'
 
 import os
