@@ -2,3 +2,4 @@ py/collector.log
 venv/
 .idea/
 py/metobs_data/
+py/data/
