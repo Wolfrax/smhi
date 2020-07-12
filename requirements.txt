@@ -7,3 +7,6 @@ urllib3==1.25.9
 
 Flask~=1.1.2
 MarkupSafe~=1.1.1
+matplotlib~=3.2.2
+geopandas~=0.8.0
+geoplot~=0.4.1
