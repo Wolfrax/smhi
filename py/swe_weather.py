@@ -36,7 +36,6 @@ FN_RAINFALL = "rainfall.svg"
 FN_WIND = "wind.svg"
 FN_WIND_STREAM = "wind_stream.svg"
 EPSG = 4326  # WGS 84
-DPI = 80
 
 
 if __name__ == "__main__":
@@ -54,8 +53,8 @@ if __name__ == "__main__":
     #
     # Below is thus a work around
     #
-    if platform.system() == 'Linux':
-        pyproj.datadir.set_data_dir('/usr/local/share/proj')
+    # if platform.system() == 'Linux':
+    #    pyproj.datadir.set_data_dir('/usr/share/proj')
 
     world = gpd.read_file(os.path.join(DATA_DIR, "ne_10m_admin_1_states_provinces.shp"))
     swe = world[world['admin'] == 'Sweden']  # Filter out Sweden from the world
@@ -124,13 +123,13 @@ if __name__ == "__main__":
                           projection=proj)
         gplt.polyplot(swe, edgecolor="Black", zorder=1, linewidth=0.5, projection=proj, ax=ax)
         ax.set_title("Average temperature 1 day")
-        plt.savefig(fn_avg_temp, bbox_inches='tight', pad_inches=0.1) #  dpi=DPI,
+        plt.savefig(fn_avg_temp, bbox_inches='tight', pad_inches=0.1)
         images.append(os.path.join(IMG_DIR, FN_AVG_TEMP))
 
     if not pressure.empty:
         fn_air_pressure = os.path.join(METOBS_DIR, IMG_DIR, FN_AIR_PRES)
         ax = gplt.voronoi(pressure,
-                          cmap='OrRd',
+                          cmap='coolwarm',
                           clip=swe,
                           hue="value",
                           legend=True,
@@ -138,7 +137,7 @@ if __name__ == "__main__":
                           projection=proj)
         gplt.polyplot(swe, edgecolor="Black", zorder=1, linewidth=0.5, projection=proj, ax=ax)
         ax.set_title("Air pressure momentary value, last hour")
-        plt.savefig(fn_air_pressure, bbox_inches='tight', pad_inches=0.1) #  dpi=DPI,
+        plt.savefig(fn_air_pressure, bbox_inches='tight', pad_inches=0.1)
         images.append(os.path.join(IMG_DIR, FN_AIR_PRES))
 
     if not rainfall.empty:
@@ -152,7 +151,7 @@ if __name__ == "__main__":
                           projection=proj)
         gplt.polyplot(swe, edgecolor="Black", zorder=1, linewidth=0.5, projection=proj, ax=ax)
         ax.set_title("Rainfall 1 day")
-        plt.savefig(fn_rainfall, bbox_inches='tight', pad_inches=0.1) #  dpi=DPI,
+        plt.savefig(fn_rainfall, bbox_inches='tight', pad_inches=0.1)
         images.append(os.path.join(IMG_DIR, FN_RAINFALL))
 
     if not wind_stations.empty:
@@ -174,7 +173,7 @@ if __name__ == "__main__":
         qv = ax.quiver(X, Y, U, V, C, transform=ccrs.AlbersEqualArea(), width=0.01)
         fig.colorbar(qv)
         ax.set_title("Wind speed and directions")
-        plt.savefig(fn_wind, bbox_inches='tight', pad_inches=0.1) #  dpi=DPI,
+        plt.savefig(fn_wind, bbox_inches='tight', pad_inches=0.1)
         images.append(os.path.join(IMG_DIR, FN_WIND))
 
         fn_wind_stream = os.path.join(METOBS_DIR, IMG_DIR, FN_WIND_STREAM)
@@ -186,7 +185,7 @@ if __name__ == "__main__":
         strm = ax.streamplot(X, Y, U, V, transform=ccrs.AlbersEqualArea(), color=magnitude)
         ax.set_title("Wind streams")
         fig.colorbar(strm.lines)
-        plt.savefig(fn_wind_stream, bbox_inches='tight', pad_inches=0.1) #  dpi=DPI,
+        plt.savefig(fn_wind_stream, bbox_inches='tight', pad_inches=0.1)
         images.append(os.path.join(IMG_DIR, FN_WIND_STREAM))
 
     html_file_name = os.path.join(METOBS_DIR, "weather.html")
