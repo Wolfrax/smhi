@@ -217,10 +217,12 @@ def store(lst):
                     table[table_year] = {table_day: day_row}
                 else:
                     if table_day not in table[table_year]:
-                        day_row = init_row()
+                        # day_row = init_row()
+                        table[table_year][table_day] = init_row()
 
-                    day_row[table_month] = {'path': str(parent_path), 'str': table_day}
-                    table[table_year][table_day] = day_row
+                    table[table_year][table_day][table_month] = {'path': str(parent_path), 'str': table_day}
+                    # day_row[table_month] = {'path': str(parent_path), 'str': table_day}
+                    # table[table_year][table_day] = day_row
 
         root_index_file = render_template('geojson_root_index.html', files=table)
         with open(os.path.join(ROOT, INDEX_HTML), encoding='utf-8', mode='w') as outfile:
