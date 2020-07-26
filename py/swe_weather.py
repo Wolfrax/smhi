@@ -18,6 +18,7 @@ from scipy.interpolate import griddata
 from flask import Flask, render_template
 import requests
 import datetime
+from uritemplate import expand
 
 
 DELTA = 1
@@ -119,12 +120,17 @@ class Map:
         self.zorder += 1
         return pl
 
+    def add_scatter(self, data):
+        self.ax.scatter(data['lon'], data['lat'], c=data['peakCurrent'], marker='x',
+                        transform=ccrs.PlateCarree(), zorder=self.zorder)
+        self.zorder += 1
+
 
 if __name__ == "__main__":
     os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
 
     images = []
-    obs_data = cmap = fname = fn = title = wind_stations = None
+    obs_data = cmap = fname = fn = title = wind_stations = lightnings = None
 
     for img in ['Temp', 'Rain', 'Pressure', 'Wind', 'Quiver']:
         mp = Map()
@@ -138,9 +144,23 @@ if __name__ == "__main__":
         elif img == 'Rain':
             obs_data = gpd.read_file("https://www.viltstigen.se/metobs/latest/05*")
             cmap = 'Blues'
-            title = 'Rainfall 1 day'
+            title = 'Rainfall and lightning 1 day'
             fname = 'rain.svg'
             fn = os.path.join(METOBS_DIR, IMG_DIR, fname)
+
+            dt = datetime.datetime.now() - datetime.timedelta(1)  # Get yesterday date
+            lightning_data = requests.get(
+                expand('https://opendata-download-lightning.smhi.se/api/version/latest/'
+                       'year/{year}/month/{month}/day/{day}/data.json',
+                       year=dt.strftime("%Y"),
+                       month=dt.strftime("%m"),
+                       day=dt.strftime("%d"))).json()
+
+            lightnings = {'lat': [], 'lon': [], 'peakCurrent': []}
+            for l in lightning_data['values']:
+                lightnings['lat'].append(l['lat'])
+                lightnings['lon'].append(l['lon'])
+                lightnings['peakCurrent'].append(l['peakCurrent'])
         elif img == 'Pressure':
             obs_data = gpd.read_file("https://www.viltstigen.se/metobs/latest/09*")
             cmap = 'coolwarm'
@@ -164,6 +184,8 @@ if __name__ == "__main__":
             im = mp.add_image(grid, cmap)
             mp.add_contour(grid)
             mp.add_colorbar(im)
+            if img == 'Rain' and lightnings:
+                mp.add_scatter(lightnings)
         elif img in ['Wind', 'Quiver']:
             if img == 'Wind':
                 grid = mp.gen_grid(obs_data)
@@ -179,6 +201,6 @@ if __name__ == "__main__":
 
     html_file_name = os.path.join(METOBS_DIR, "weather.html")
     with app.app_context():
-        html_file = render_template('swe_weather.html', head=title, images=images)
+        html_file = render_template('swe_weather.html', head=mp.title, images=images)
         with open(html_file_name, encoding='utf-8', mode='w') as outfile:
             outfile.write(html_file)
