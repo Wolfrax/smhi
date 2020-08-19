@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <title>Sweden lightnings</title>
+    <link rel="shortcut icon" href="https://www.viltstigen.se/favicon.png">
+    <style>
+        table, th, td {
+            border: 1px solid black;
+            border-collapse: collapse;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+<h1>Lightnings - Sweden</h1>
+<h2>{{first_date}} - {{last_date}}</h2>
+{% for img in maps %}
+    <img src="{{ img }}">
+{% endfor %}
+<br>
+{% for img in bars %}
+    <img src="{{ img }}">
+{% endfor %}
+<br>
+<table style="width:50%">
+        <th></th>
+        <th>Totals</th>
+        <th>Avg/day</th>
+        <th>Max (1 day)</th>
+        <th>Peak current (kAmp)</th>
+    {% for key, val in table.items()|sort(attribute=0) %}
+    <tr>
+        <td> {{ key }} </td>
+        {% for k, v in val.items() %}
+            <td> {{ v }} </td>
+        {% endfor %}
+    </tr>
+    {% endfor %}
+</table>
+
+<br>
+<footer>
+    <p style="font-size:14px">
+        Data by <a href="https://opendata.smhi.se/apidocs/metobs/index.html">SMHI Open Data</a>
+        <br>
+        Published under these <a href="https://www.smhi.se/klimatdata/Oppna-data/Information-om-oppna-data/villkor-for-anvandning-1.30622">Terms and conditions</a>
+    </p>
+    <p style="font-size:12px">
+        Copyright (C) Mats Melander
+    </p>
+</footer>
+</body>
+</html>

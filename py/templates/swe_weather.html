@@ -10,6 +10,9 @@
 {% for img in images %}
     <img src="{{ img }}">
 {% endfor %}
+{% for annot in annotations %}
+    <p>{{ annot }}</p>
+{% endfor %}
 <footer>
     <p>Data by <a href="https://opendata.smhi.se/apidocs/metobs/index.html">SMHI Open Data</a></p>
     <p>Published under these <a href="https://www.smhi.se/klimatdata/Oppna-data/Information-om-oppna-data/villkor-for-anvandning-1.30622">Terms and conditions</a></p>

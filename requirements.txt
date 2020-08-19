@@ -15,3 +15,5 @@ Cartopy~=0.18.0
 pyproj~=2.6.1.post1
 scipy~=1.5.1
 uritemplate~=3.0.1
+atoma~=0.0.17
+python-dateutil~=2.8.1

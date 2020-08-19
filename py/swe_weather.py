@@ -130,9 +130,10 @@ if __name__ == "__main__":
     os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
 
     images = []
+    annotations = []
     obs_data = cmap = fname = fn = title = wind_stations = lightnings = None
 
-    for img in ['Temp', 'Rain', 'Pressure', 'Wind', 'Quiver']:
+    for img in ['Temp', 'Rain', 'Pressure', 'Wind', 'Quiver', 'Lightning']:
         mp = Map()
 
         if img == 'Temp':
@@ -141,11 +142,12 @@ if __name__ == "__main__":
             title = 'Average temperature 1 day'
             fname = 'temp.svg'
             fn = os.path.join(METOBS_DIR, IMG_DIR, fname)
-        elif img == 'Rain':
+            annotations.append("Min temp {}, Max temp {}".format(min(obs_data['value']), max(obs_data['value'])))
+        elif img in ['Rain', 'Lightning']:
             obs_data = gpd.read_file("https://www.viltstigen.se/metobs/latest/05*")
             cmap = 'Blues'
-            title = 'Rainfall and lightning 1 day'
-            fname = 'rain.svg'
+            title = 'Rainfall 1 day' if img == 'Rain' else 'Lightning 1 day'
+            fname = 'rain.svg' if img == 'Rain' else 'lightning.svg'
             fn = os.path.join(METOBS_DIR, IMG_DIR, fname)
 
             dt = datetime.datetime.now() - datetime.timedelta(1)  # Get yesterday date
@@ -157,17 +159,22 @@ if __name__ == "__main__":
                        day=dt.strftime("%d"))).json()
 
             lightnings = {'lat': [], 'lon': [], 'peakCurrent': []}
+            no_lightnings = 0
             for l in lightning_data['values']:
                 lightnings['lat'].append(l['lat'])
                 lightnings['lon'].append(l['lon'])
                 lightnings['peakCurrent'].append(l['peakCurrent'])
+                no_lightnings += 1
+
+            annotations.append("Nr of lightnings {}".format(no_lightnings)) if img == 'Lightning' else \
+                annotations.append("Max rain {}".format(max(obs_data['value'])))
         elif img == 'Pressure':
             obs_data = gpd.read_file("https://www.viltstigen.se/metobs/latest/09*")
             cmap = 'coolwarm'
             title = 'Air pressure, momentary value last hour'
             fname = 'pressure.svg'
             fn = os.path.join(METOBS_DIR, IMG_DIR, fname)
-        elif img == 'Wind' or 'Quiver':
+        elif img in ['Wind', 'Quiver']:
             obs_data = gpd.read_file("https://www.viltstigen.se/metobs/latest/09*")
             wind_directions = gpd.read_file("https://www.viltstigen.se/metobs/latest/03*")
             wind_speeds = gpd.read_file("https://www.viltstigen.se/metobs/latest/04*")
@@ -176,6 +183,8 @@ if __name__ == "__main__":
             title = 'Wind streams and air pressure' if img == 'Wind' else "Wind direction and strengths"
             fname = 'winds.svg' if img == 'Wind' else "wind_quiver.svg"
             fn = os.path.join(METOBS_DIR, IMG_DIR, fname)
+            if img == 'Wind':
+                annotations.append("Max wind {}m/s".format(max(wind_speeds['value'])))
 
         geom = mp.new_geometry('SWE')
 
@@ -184,7 +193,8 @@ if __name__ == "__main__":
             im = mp.add_image(grid, cmap)
             mp.add_contour(grid)
             mp.add_colorbar(im)
-            if img == 'Rain' and lightnings:
+        elif img in ['Lightning']:
+            if lightnings:
                 mp.add_scatter(lightnings)
         elif img in ['Wind', 'Quiver']:
             if img == 'Wind':
@@ -201,6 +211,6 @@ if __name__ == "__main__":
 
     html_file_name = os.path.join(METOBS_DIR, "weather.html")
     with app.app_context():
-        html_file = render_template('swe_weather.html', head=mp.title, images=images)
+        html_file = render_template('swe_weather.html', head=mp.title, images=images, annotations=annotations)
         with open(html_file_name, encoding='utf-8', mode='w') as outfile:
             outfile.write(html_file)
