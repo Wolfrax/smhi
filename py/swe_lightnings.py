@@ -125,6 +125,8 @@ class Lightnings:
             with open(self.fn) as f:
                 self.db = json.load(f)
                 self.db['hist'] = np.array(self.db['hist'])
+                self.db['first_date'] = datetime.datetime.fromisoformat(self.db['first_date'])
+                self.db['last_date'] = datetime.datetime.fromisoformat(self.db['last_date'])
         else:
             self.db = {
                 'table': {
