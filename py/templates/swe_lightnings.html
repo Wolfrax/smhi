@@ -14,16 +14,19 @@
 </head>
 
 <body>
-<h1>Lightnings - Sweden</h1>
-<h2>{{first_date}} - {{last_date}}</h2>
+<h1>Lightnings</h1>
 {% for img in maps %}
     <img src="{{ img }}">
 {% endfor %}
+
 <br>
+
 {% for img in bars %}
     <img src="{{ img }}">
 {% endfor %}
+
 <br>
+
 <table style="width:50%">
         <th></th>
         <th>Totals</th>

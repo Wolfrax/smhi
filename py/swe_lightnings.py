@@ -56,7 +56,6 @@ class Country:
         self.ax = self.fig.add_subplot(projection=ccrs.AlbersEqualArea(central_latitude=62.3858,
                                                                        central_longitude=16.3220))
         self.ax.set_extent([self.min_lon, self.max_lon, self.min_lat, self.max_lat])
-
         self.fig_bar = plt.figure(figsize=(4, 3))
         self.ax_bar = self.fig_bar.add_subplot()
 
@@ -66,9 +65,10 @@ class Country:
     def transform_points(self, lon, lat):
         return self.ax.projection.transform_points(ccrs.PlateCarree(), lon, lat)
 
-    def image(self, x, ext):
-        im = self.ax.imshow(x, interpolation='bilinear', origin='low', cmap='jet', extent=ext, alpha=0.75)
+    def image(self, x, title, ext):
+        im = self.ax.imshow(x, interpolation='bilinear', origin='low', cmap='jet', extent=ext)
         self.fig.colorbar(im)
+        self.ax.title.set_text(title)
 
     def bars(self, x):
         nr_of_years = len(x)
@@ -121,12 +121,16 @@ class Lightnings:
         self.fn_map = os.path.join(METOBS_DIR, IMG_DIR, self.latest_date['year'] + "_lightnings_map.svg")
         self.fn_bars = os.path.join(METOBS_DIR, IMG_DIR, self.latest_date['year'] + "_lightnings_bars.svg")
         self.fn = os.path.join(METOBS_DIR, self.latest_date['year'] + "_lightnings.json")
+
         if os.path.exists(self.fn):
             with open(self.fn) as f:
                 self.db = json.load(f)
                 self.db['hist'] = np.array(self.db['hist'])
-                self.db['first_date'] = datetime.datetime.fromisoformat(self.db['first_date'])
-                self.db['last_date'] = datetime.datetime.fromisoformat(self.db['last_date'])
+                self.db['x_edges'] = np.array(self.db['x_edges'])
+                self.db['y_edges'] = np.array(self.db['y_edges'])
+                self.db['first_date'] = datetime.datetime.strptime(self.db['first_date'], '%Y-%m-%dT%H:%M:%S.%f')
+                self.db['last_date'] = datetime.datetime.strptime(self.db['last_date'], '%Y-%m-%dT%H:%M:%S.%f')
+
         else:
             self.db = {
                 'table': {
@@ -141,10 +145,10 @@ class Lightnings:
                 'hist': np.zeros((100, 100)),
                 'monthly': {},
                 'first_date': datetime.datetime(2999, 12, 31),
-                'last_date': datetime.datetime(1900, 1, 1)
+                'last_date': datetime.datetime(1900, 1, 1),
+                'x_edges': np.zeros(100),
+                'y_edges': np.zeros(100)
             }
-        self.x_edges = np.zeros(100)
-        self.y_edges = np.zeros(100)
 
     def get(self, day):
         values = {}
@@ -247,9 +251,18 @@ class Lightnings:
         else:
             self.db['table']['Totals']['Avg nr'] = round(self.db['table']['Totals']['Total nr'] /
                                                          self.db['days']['Totals'])
-            self.db['table'][self.latest_date['year']]['Avg nr'] = \
-                round(self.db['table'][self.latest_date['year']]['Total nr'] /
-                      self.db['days'][self.latest_date['year']])
+            if self.latest_date['year'] in self.db['table']:
+                self.db['table'][self.latest_date['year']]['Avg nr'] = \
+                    round(self.db['table'][self.latest_date['year']]['Total nr'] /
+                          self.db['days'][self.latest_date['year']])
+            else:
+                self.db['days'][self.latest_date['year']] = 1
+                self.db['table'][self.latest_date['year']] = {
+                    'Total nr': 0,
+                    'Avg nr': 0,
+                    'Max nr': 0,
+                    'Peak current': 0
+                }
 
         return values
 
@@ -297,7 +310,7 @@ class Lightnings:
                     xy_points = self.swe.transform_points(month[d]['lon'], month[d]['lat'])
                     range_points = self.swe.transform_points(np.array([self.swe.min_lon, self.swe.max_lon]),
                                                              np.array([self.swe.min_lat, self.swe.max_lat]))
-                    h, self.x_edges, self.y_edges = np.histogram2d(xy_points[:, 0], xy_points[:, 1],
+                    h, self.db['x_edges'], self.db['y_edges'] = np.histogram2d(xy_points[:, 0], xy_points[:, 1],
                                                                    range=(range_points[:, 0], range_points[:, 1]),
                                                                    bins=(len(self.swe.lon_range),
                                                                          len(self.swe.lat_range)))
@@ -310,7 +323,10 @@ class Lightnings:
     def render_histogram(self):
         hist = self.db['hist']
         h = np.ma.masked_where(hist.T == 0, hist.T)
-        self.swe.image(h, (self.x_edges[0], self.x_edges[-1], self.y_edges[0], self.y_edges[-1]))
+
+        title = self.db['first_date'].strftime('%Y-%m-%d') + " - " + self.db['last_date'].strftime('%Y-%m-%d')
+        self.swe.image(h, title, (self.db['x_edges'][0], self.db['x_edges'][-1],
+                                  self.db['y_edges'][0], self.db['y_edges'][-1]))
 
     def render_monthly(self):
         self.swe.bars(self.db['monthly'])
@@ -385,7 +401,7 @@ if __name__ == '__main__':
     FLAG_RESET_AT_NEW_YEAR = (start_day == end_day)
 
     lightnings = Lightnings()
-    for d in range(end_day, start_day + 1):
+    for d in range(start_day, end_day - 1, -1):
         values = lightnings.get(d)
         lightnings.histogram(values)
         lightnings.monthly(values)
@@ -402,8 +418,6 @@ if __name__ == '__main__':
     html_file_name = os.path.join(METOBS_DIR, "lightnings.html")
     with app.app_context():
         html_file = render_template('swe_lightnings.html',
-                                    first_date=lightnings.db['first_date'].strftime('%Y-%m-%d'),
-                                    last_date=lightnings.db['last_date'].strftime('%Y-%m-%d'),
                                     table=lightnings.db['table'],
                                     maps=map_list,
                                     bars=bar_list)
