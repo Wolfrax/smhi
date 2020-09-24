@@ -166,6 +166,8 @@ if __name__ == "__main__":
                 lightnings['peakCurrent'].append(l['peakCurrent'])
                 no_lightnings += 1
 
+            title = 'Rainfall 1 day' if img == 'Rain' else 'Lightnings ' + dt.strftime("%Y-%m-%d") + \
+                                                           ' (' + str(no_lightnings) + ')'
             annotations.append("Nr of lightnings {}".format(no_lightnings)) if img == 'Lightning' else \
                 annotations.append("Max rain {}".format(max(obs_data['value'])))
         elif img == 'Pressure':

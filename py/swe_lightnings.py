@@ -27,6 +27,8 @@ DATA_DIR = "data"
 IMG_DIR = "img"
 DELTA = 1
 FLAG_RESET_AT_NEW_YEAR = True
+GRID_SIZE = 200
+
 
 app = Flask(__name__)
 
@@ -49,8 +51,16 @@ class Country:
         self.max_lon = self.country.total_bounds[2] + DELTA
         self.max_lat = self.country.total_bounds[3] + DELTA
 
-        self.lon_range = np.arange(self.min_lon, self.max_lon, (self.max_lon - self.min_lon) / 100)
-        self.lat_range = np.arange(self.min_lat, self.max_lat, (self.max_lat - self.min_lat) / 100)
+        self.lon_range = np.arange(self.min_lon, self.max_lon, (self.max_lon - self.min_lon) / GRID_SIZE)
+        self.lat_range = np.arange(self.min_lat, self.max_lat, (self.max_lat - self.min_lat) / GRID_SIZE)
+
+        if self.lon_range.size != self.lat_range.size:
+            # If size differs, make them equal by the smallest, dropping the last elements of the largets
+            # (should be only one)
+            sz = min(self.lon_range.size,  self.lat_range.size)
+            warnings.warn("Size of lon_range/lat_range not queal, setting both to size {}".format(sz))
+            self.lon_range = self.lon_range[:sz]
+            self.lat_range = self.lat_range[:sz]
 
         self.fig = plt.figure(figsize=(8, 6))
         self.ax = self.fig.add_subplot(projection=ccrs.AlbersEqualArea(central_latitude=62.3858,
@@ -142,12 +152,12 @@ class Lightnings:
                     },
                 },
                 'days': {'Totals': 0},
-                'hist': np.zeros((100, 100)),
+                'hist': np.zeros((GRID_SIZE, GRID_SIZE)),
                 'monthly': {},
                 'first_date': datetime.datetime(2999, 12, 31),
                 'last_date': datetime.datetime(1900, 1, 1),
-                'x_edges': np.zeros(100),
-                'y_edges': np.zeros(100)
+                'x_edges': np.zeros(GRID_SIZE),
+                'y_edges': np.zeros(GRID_SIZE)
             }
 
     def get(self, day):
@@ -165,7 +175,7 @@ class Lightnings:
                 # ie when "Start date"/"End date" are not set but use default values.
                 warnings.warn("Reset self.db due to new year: {}".format(self.latest_date['year']))
 
-                self.db['hist'] = np.zeros((100, 100))
+                self.db['hist'] = np.zeros((GRID_SIZE, GRID_SIZE))
                 self.db['monthly'] = {}
 
             self.fn_map = os.path.join(METOBS_DIR, IMG_DIR, self.latest_date['year'] + "_lightnings_map.svg")
@@ -305,7 +315,7 @@ class Lightnings:
                     # for Sweden. transform_points returns a multidimensional array and we want to use the
                     # first ("[:, 0]") and second ("[:, 1]") columns.
                     # range-parameter ensure that we cover the full bounding box of Sweden.
-                    # bins-parameter is the number of bins in longitude and latitude dimensisons, 100 eqach.
+                    # bins-parameter is the number of bins in longitude and latitude dimensisons, GRID_SIZE each.
 
                     xy_points = self.swe.transform_points(month[d]['lon'], month[d]['lat'])
                     range_points = self.swe.transform_points(np.array([self.swe.min_lon, self.swe.max_lon]),
@@ -424,5 +434,5 @@ if __name__ == '__main__':
         with open(html_file_name, encoding='utf-8', mode='w') as outfile:
             outfile.write(html_file)
 
-#    import webbrowser
-#    webbrowser.open(html_file_name, new=2)
+    import webbrowser
+    webbrowser.open(html_file_name, new=2)

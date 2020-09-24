@@ -49,7 +49,7 @@
             {% for day, day_val in year_val.items()|sort(attribute=0) %}
                 <tr>
                     {% for key, val in day_val.items()|sort(attribute=0) %}
-                    <td> <a href=" {{ val['path'] }}">{{ val['str'] }} </a> </td>
+                    <td> <a href="{{val['path']}}/">{{val['str']}}</a> </td>
                     {% endfor %}
                 </tr>
             {% endfor %}

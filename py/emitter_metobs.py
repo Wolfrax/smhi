@@ -42,7 +42,8 @@ def get_file(subpath):
             abort(404)
         else:
             with open(fn) as f:
-                return f.read()
+                res = f.read()
+            return res
     else:
         abort(404)
 
