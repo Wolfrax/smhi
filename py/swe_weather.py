@@ -19,6 +19,8 @@ from flask import Flask, render_template
 import requests
 import datetime
 from uritemplate import expand
+import warnings
+from shapely.errors import ShapelyDeprecationWarning
 
 
 DELTA = 1
@@ -119,6 +121,13 @@ class Map:
         self.ax.scatter(data['lon'], data['lat'], c=data['peakCurrent'], marker='x',
                         transform=ccrs.PlateCarree(), zorder=self.zorder)
         self.zorder += 1
+
+
+# Having this Python script working with all libraries compiled and with right versions is a nightmare...
+# Currently, it works, but with warnings from Shapely. There for I am suppressing these warnings.
+# See https://gis.stackexchange.com/questions/420046/shapely-deprecation-warning-message-when-plotting-geopandas-geodataframe
+
+warnings.filterwarnings("ignore", category=ShapelyDeprecationWarning)
 
 
 if __name__ == "__main__":

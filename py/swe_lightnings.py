@@ -20,6 +20,8 @@ import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import warnings
 from flask import Flask, render_template
+import warnings
+from shapely.errors import ShapelyDeprecationWarning
 
 
 METOBS_DIR = "metobs_data"
@@ -334,7 +336,7 @@ class Lightnings:
         hist = self.db['hist']
         h = np.ma.masked_where(hist.T == 0, hist.T)
 
-        title = self.db['first_date'].strftime('%Y-%m-%d') + " - " + self.db['last_date'].strftime('%Y-%m-%d')
+        title = self.db['last_date'].strftime('%Y-%m-%d')
         self.swe.image(h, title, (self.db['x_edges'][0], self.db['x_edges'][-1],
                                   self.db['y_edges'][0], self.db['y_edges'][-1]))
 
@@ -363,6 +365,11 @@ def get_bars():
     files = [name for name in os.listdir(file_path) if os.path.isfile(os.path.join(file_path, name))]
     return sorted([os.path.join(IMG_DIR, name) for name in files if name.endswith("_bars.svg")])
 
+# Having this Python script working with all libraries compiled and with right versions is a nightmare...
+# Currently, it works, but with warnings from Shapely. There for I am suppressing these warnings.
+# See https://gis.stackexchange.com/questions/420046/shapely-deprecation-warning-message-when-plotting-geopandas-geodataframe
+
+warnings.filterwarnings("ignore", category=ShapelyDeprecationWarning)
 
 if __name__ == '__main__':
     os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))

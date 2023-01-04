@@ -6,6 +6,8 @@ __author__ = 'mm'
 # Mats Melander 2020-07-10
 # Script for generating maps of Sweden with some weather information
 #
+# NOTE, this script is deprecated and not used anymore!
+#
 
 import matplotlib.pyplot as plt
 import geopandas as gpd
