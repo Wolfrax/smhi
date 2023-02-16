@@ -48,5 +48,5 @@ snuggs==1.4.7
 threadpoolctl==3.1.0
 uritemplate==3.0.1
 urllib3==1.25.9
-Werkzeug==1.0.1
+Werkzeug==2.2.3
 xyzservices==2022.9.0
