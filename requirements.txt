@@ -11,7 +11,7 @@ contextily==1.2.0
 cycler==0.11.0
 defusedxml==0.7.1
 Fiona==1.8.22
-Flask==1.1.4
+Flask==2.3.2
 geographiclib==2.0
 geojson==2.5.0
 geopandas==0.8.0
