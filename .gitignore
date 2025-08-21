@@ -1,5 +1,6 @@
 py/collector.log
 venv/
+.venv/
 .idea/
 py/metobs_data/
 py/data/
