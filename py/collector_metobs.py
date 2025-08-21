@@ -52,7 +52,7 @@ class Smhi:
             #    if d["key"] == "latest":
             #        i = index
 
-            # ind1 points to the latest version of SMHI api, ind2 to the json-type of the latset api
+            # ind1 points to the latest version of SMHI api, ind2 to the json-type of the latest api
             ind1 = next(i for (i, d) in enumerate(api["version"]) if d["key"] == "latest")
             ind2 = next(i for (i, d) in enumerate(api["version"][ind1]["link"]) if d["type"] == "application/json")
             self.resources = requests.get(api["version"][ind1]["link"][ind2]["href"]).json()
@@ -86,7 +86,7 @@ class Smhi:
                     ind4 = next(i for (i, d) in enumerate(lnk["link"]) if d["type"] == "application/json")
                     # Note, no key for data, hence always 0
                     lnk = requests.get(lnk["data"][0]["link"][ind4]["href"]).json()
-                    if lnk["value"] is not None and stn['active'] is True:
+                    if lnk["value"] is not None and lnk["value"] and stn['active'] is True:
                         try:
                             # NB if we take the last element we get the latest value,
                             # the first element (0) is the oldest, the last is the youngest (in case we have a list)
