@@ -38,7 +38,8 @@ def get_file(subpath):
 
     file_list = sorted(glob.glob(file_path)) if file_path else []
     if file_list:
-        fn = os.path.join(path, os.path.basename(str(file_list[0])))
+        fn = file_list[0]
+        #fn = os.path.join(file_path, os.path.basename(str(file_list[0])))
         if os.path.isdir(fn):
             abort(404)
         else:
