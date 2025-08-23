@@ -28,10 +28,11 @@ def get_file(subpath):
 
     if len(parts) == 2 and parts[0].lower() == LATEST:  # Option 1
         path = os.path.join(ROOT, LATEST)
-        file_path = os.path.join(path, parts[1])
+        #file_path = os.path.join(path, parts[1])
+        file_path =  os.path.join(os.path.dirname(os.path.abspath(__file__)), path, parts[1])
     elif len(parts) == 4:  # Option 2
         path = os.path.join(ROOT, parts[0], parts[1], parts[2])
-        file_path = os.path.join(path, parts[3])
+        file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), path, parts[3])
     else:  # Not valid
         path = file_path = ""
 
@@ -56,3 +57,11 @@ def latest_file(filename):
         return os.path.basename(str(file_list[0]))
     else:
         abort(404)
+
+if __name__ == "__main__":
+    # run with debugging enabled
+    app.run(
+        host="0.0.0.0",  # accessible from outside (optional, change to "127.0.0.1" if only local)
+        port=5000,
+        debug=True
+    )

@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Flask: Debug emitter_metobs.py",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/py/emitter_metobs.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [],
+            "env": {
+                "FLASK_ENV": "development"
+            }
+        }
+    ]
+}
